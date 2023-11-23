@@ -1,0 +1,719 @@
+---
+title: "Census Tract Analysis"
+author: "Cynthia Lteif"
+date: "November 12, 2023"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(here)
+```
+
+
+```{r, message=FALSE}
+library(zipcodeR)
+library(dplyr)
+
+zip_codes <- c(
+  84531, 84536, 85003, 85004, 85006, 85007, 85008, 85009, 85012, 85013, 85014, 85015, 85016, 85017, 85018, 85019, 85020, 85021, 85022, 85023, 85024, 85027, 85028, 85029, 85031, 85032, 85033, 85034, 85035, 85037, 85040, 85041, 85042, 85043, 85044, 85045, 85048, 85050, 85051, 85053, 85054, 85083, 85085, 85086, 85087, 85118, 85119, 85120, 85121, 85122, 85123, 85128, 85131, 85132, 85135, 85137, 85138, 85139, 85140, 85141, 85142, 85143, 85145, 85147, 85172, 85173, 85192, 85193, 85194, 85201, 85202, 85203, 85204, 85205, 85206, 85207, 85208, 85209, 85210, 85212, 85213, 85215, 85224, 85225, 85226, 85233, 85234, 85248, 85249, 85250, 85251, 85253, 85254, 85255, 85256, 85257, 85258, 85259, 85262, 85263, 85264, 85266, 85268, 85281, 85282, 85283, 85284, 85286, 85295, 85296, 85297, 85298, 85301, 85302, 85303, 85304, 85305, 85306, 85307, 85308, 85309, 85310, 85320, 85321, 85322, 85323, 85324, 85325, 85326, 85328, 85331, 85332, 85333, 85334, 85335, 85336, 85337, 85338, 85339, 85340, 85341, 85342, 85343, 85344, 85345, 85346, 85347, 85348, 85349, 85350, 85351, 85352, 85353, 85354, 85355, 85356, 85357, 85360, 85361, 85362, 85363, 85364, 85365, 85367, 85371, 85373, 85374, 85375, 85377, 85379, 85381, 85382, 85383, 85387, 85388, 85390, 85392, 85395, 85396, 85501, 85530, 85531, 85533, 85534, 85535, 85536, 85539, 85540, 85541, 85542, 85543, 85544, 85545, 85546, 85550, 85551, 85552, 85553, 85554, 85601, 85602, 85603, 85605, 85606, 85607, 85608, 85609, 85610, 85611, 85613, 85614, 85615, 85616, 85617, 85618, 85619, 85620, 85621, 85622, 85623, 85624, 85625, 85626, 85627, 85629, 85630, 85631, 85632, 85633, 85634, 85635, 85637, 85638, 85640, 85641, 85643, 85645, 85646, 85648, 85650, 85653, 85654, 85658, 85701, 85704, 85705, 85706, 85707, 85708, 85710, 85711, 85712, 85713, 85714, 85715, 85716, 85718, 85719, 85723, 85724, 85726, 85730, 85735, 85736, 85737, 85739, 85741, 85742, 85743, 85745, 85746, 85747, 85748, 85749, 85750, 85755, 85756, 85757, 85901, 85911, 85912, 85920, 85922, 85923, 85924, 85925, 85926, 85927, 85928, 85929, 85930, 85931, 85932, 85933, 85934, 85935, 85936, 85937, 85938, 85939, 85940, 85941, 85942, 86001, 86003, 86004, 86011, 86015, 86016, 86017, 86018, 86020, 86021, 86022, 86023, 86024, 86025, 86028, 86029, 86030, 86031, 86032, 86033, 86034, 86035, 86036, 86038, 86039, 86040, 86042, 86043, 86044, 86045, 86046, 86047, 86052, 86053, 86054, 86301, 86303, 86305, 86313, 86314, 86315, 86320, 86321, 86322, 86323, 86324, 86325, 86326, 86327, 86329, 86331, 86332, 86333, 86334, 86335, 86336, 86337, 86338, 86343, 86351, 86401, 86403, 86404, 86406, 86409, 86411, 86413, 86426, 86429, 86431, 86432, 86433, 86434, 86435, 86436, 86437, 86438, 86440, 86441, 86442, 86443, 86444, 86445, 86502, 86503, 86504, 86505, 86506, 86507, 86508, 86510, 86511, 86512, 86514, 86515, 86520, 86535, 86538, 86540, 86544, 86545, 86547, 86556, 87328
+)
+
+all_tracts <- data.frame()
+
+for (zip_code in zip_codes) {
+  tracts <- get_tracts(zip_code)
+  all_tracts <- rbind(all_tracts, tracts)
+}
+
+head(all_tracts)  
+
+```
+
+```{r}
+library(httr)
+library(jsonlite)
+
+#The API endpoint
+api_endpoint <- "https://api.census.gov/data/2009/acs/acs5"
+
+# Define the list of variables to be retrieved
+variables <- "NAME,B01002_001E,B19001_001E,B01003_001E,B02001_002E,B02001_003E,B02001_004E,B02001_005E,B02001_006E,B02001_007E,B02001_008E,B03001_001E,B11001_001E,B25010_001E,B15002_015E,B15002_016E,B15002_017E,B15002_018E,B15002_032E,B15002_033E,B15002_034E,B15002_035E"
+
+# Define the filter criteria (in this case, for the state of Arizona)
+filter <- "state:04"
+
+# Specify we're looking for data of all tracts
+for_clause <- "tract:*"
+
+# Construct the full API URL
+api_url <- paste(api_endpoint, "?get=", variables, "&for=", for_clause, "&in=", filter, sep="")
+
+# Make the API request
+response <- GET(api_url)
+
+# Check if the request was successful
+if (http_type(response) == "application/json") {
+  # Parse the JSON response into a data frame
+  data <- fromJSON(content(response, "text"))
+  # The first row contains column names, so remove it
+  colnames(data) <- data[1, ]
+  data <- data[-1, ]
+
+  # Convert the data to a data frame
+  data_frame <- as.data.frame(data)
+  
+  print(head(data_frame))
+} else {
+  print("Error: Unable to retrieve data from the API.")
+}
+
+
+```
+
+Data Wrangling
+```{r message=FALSE, warning=FALSE}
+library(dplyr)
+
+data_frame <- data_frame %>%
+  mutate(BS.Degree.and.above = 
+           as.numeric(B15002_015E) + 
+           as.numeric(B15002_016E) + 
+           as.numeric(B15002_017E) + 
+           as.numeric(B15002_018E) + 
+           as.numeric(B15002_032E) + 
+           as.numeric(B15002_033E) + 
+           as.numeric(B15002_034E) + 
+           as.numeric(B15002_035E)) %>%
+   select(-B15002_015E, -B15002_016E, -B15002_017E, -B15002_018E, -B15002_032E, -B15002_033E, -B15002_034E, -B15002_035E)
+
+
+new_column_names <- c(
+  "Census.Tract",
+  "Median.age",
+  "Median.HH.Income",
+  "Total.Population",
+  "White",
+  "Black.or.African.American",
+  "American.Indian.and.Alaska.Native",
+  "Asian",
+  "Native.Hawaiian.and.Other.Pacific.Islander",
+  "Some.other.race",
+  "Two.or.more.races",
+  "Hispanic.or.Latino",
+  "Total.Households",
+  "Average.HH.size",
+  "State",
+  "County",
+  "TRACT",
+  "BS.Degree.and.above"
+)
+
+# Update the column names of the data frame
+colnames(data_frame) <- new_column_names
+
+data_2009 <- data_frame %>%
+  mutate(Year = 0)
+
+data_2009 <- data_2009 %>%
+  select(-State, -County, -TRACT) #remove state and county from dataframe
+
+# store data dictionary file path
+CC_FILEPATH <- here::here( "data/census.geo.csv" )
+
+# import data dictionary
+census.geo <- read.csv( CC_FILEPATH, stringsAsFactors=F )
+```
+
+```{r}
+data_2009 <- inner_join(data_2009, census.geo, by = "Census.Tract")
+data_2009 <- na.omit(data_2009)
+
+```
+
+
+```{r}
+# store data dictionary file path
+DD_FILEPATH <- here::here( "data/dataa.csv" )
+
+# import data dictionary
+data_2014 <- read.csv( DD_FILEPATH, stringsAsFactors=F )
+
+new_column_names_2014 <- c(
+  "Census.Tract",
+  "GEOID",
+  "Median.HH.Income",
+  "Year",
+  "Total.Population",
+  "Total.Households",
+  "Median.age",
+  "Average.HH.size",
+  "BS.Degree.and.above",
+  "White",
+  "Black.or.African.American",
+  "American.Indian.and.Alaska.Native",
+  "Asian",
+  "Native.Hawaiian.and.Other.Pacific.Islander",
+  "Some.other.race",
+  "Two.or.more.races",
+  "Hispanic.or.Latino"
+)
+
+colnames(data_2014) <- new_column_names_2014
+```
+
+
+
+```{r}
+
+merged_data <- rbind(data_2009, data_2014)
+# Remove NAs 
+merged_data <- na.omit(merged_data)
+# Assuming "Year" is the name of the column containing the information about the year
+year_counts1 <- table(merged_data$Year)
+print(year_counts1)
+#Find unique number of census tracts
+unique_tracts <- unique(merged_data$Census.Tract) 
+num_unique_tracts <- length(unique_tracts)
+print(num_unique_tracts)
+
+```
+
+```{r}
+merged_data$Median.age <-as.numeric(merged_data$Median.age)
+merged_data$Median.HH.Income <-as.numeric(merged_data$Median.HH.Income)
+merged_data$Total.Population <-as.numeric(merged_data$Total.Population)
+merged_data$White <-as.numeric(merged_data$White)
+merged_data$Black.or.African.American <-as.numeric(merged_data$Black.or.African.American)
+merged_data$American.Indian.and.Alaska.Native <-as.numeric(merged_data$American.Indian.and.Alaska.Native)
+merged_data$Asian <-as.numeric(merged_data$Asian)
+merged_data$Native.Hawaiian.and.Other.Pacific.Islander <-as.numeric(merged_data$Native.Hawaiian.and.Other.Pacific.Islander)
+merged_data$Hispanic.or.Latino <-as.numeric(merged_data$Hispanic.or.Latino)
+merged_data$Total.Households <-as.numeric(merged_data$Total.Households)
+merged_data$Average.HH.size <-as.numeric(merged_data$Average.HH.size)
+summary(merged_data)
+
+```
+
+```{r}
+#Now create a new dataset with only 2009 data for PSM
+merged_data2 <- merged_data[merged_data$Year != 1, ]
+```
+
+Getting the treatment Census Tracts
+```{r}
+# Load required libraries
+library(httr)
+library(jsonlite)
+
+# store data dictionary file path
+DF_FILEPATH <- here::here( "data/lat.long.csv" )
+
+# Read the CSV file containing coordinates into a data frame
+coords_df <- read.csv( DF_FILEPATH, stringsAsFactors=F )
+
+
+# Create an empty data frame to store the results
+results_df <- data.frame()
+
+# Define the API endpoint and benchmark
+api_url <- "https://geocoding.geo.census.gov/geocoder/geographies/coordinates"
+benchmark <- "Public_AR_Census2020"
+
+# Loop through the rows of the coordinates data frame
+
+# ...
+
+for (i in 1:nrow(coords_df)) {
+  # Get latitude and longitude from the data frame
+  latitude <- coords_df[i, "lat"]
+  longitude <- coords_df[i, "lon"]
+  
+  # Make the API call
+  api_response <- GET(url = api_url,
+                      query = list(
+                        benchmark = benchmark,
+                        format = "json",
+                        x = longitude,
+                        y = latitude,
+                        vintage = "Census2020_Census2020"
+                      ))
+  
+  # Check if the API call was successful
+  if (http_type(api_response) == "application/json") {
+    # Parse the JSON response
+    response_data <- content(api_response, "text", encoding = "UTF-8")
+    geocoding_data <- fromJSON(response_data)
+    
+    # Check if "Census Tracts" is present in the response
+    if ("Census Tracts" %in% names(geocoding_data$result$geographies)) {
+      # Extract the "TRACT" from the "Census Tracts" section
+      tracts <- geocoding_data$result$geographies$'Census Tracts'$TRACT
+    } else {
+      tracts <- NA  # or any other suitable placeholder value
+    }
+    
+    # Create a new row for the results data frame
+    result_row <- data.frame(
+      Latitude = latitude,
+      Longitude = longitude,
+      TRACT = tracts
+    )
+    
+    # Append the result row to the results data frame
+    results_df <- rbind(results_df, result_row)
+  } else {
+    cat("API call failed for row ", i, "\n")
+  }
+}
+
+results_df$TRACT
+
+```
+
+Getting the GEOID from the Census Tracts
+```{r}
+# Define the list of TRACT values you want to keep
+selected_tracts <- c(
+  "000100", "000101", "000201", "000202", "000211", "000301", "000307",
+  "000600", "000615", "000700", "000702", "000803", "000904", "000907",
+  "001100", "001200", "001201", "001300", "001302", "001303", "001403",
+  "001502", "001605", "001712", "001803", "001901", "001902", "002001",
+  "002004", "002100", "002105", "002300", "002500", "003802", "004316",
+  "005200", "005400", "005703", "011112", "011202", "011405", "011503",
+  "012100", "013000", "020503", "092305", "092500", "616000", "940100",
+  "940200", "940300", "940400", "940800", "940900", "941200", "942500",
+  "944900", "945001", "945100", "960400", "961100", "961300", "961701",
+  "963300", "964201", "964202", "965301", "966000", "966101", "966111",
+  "970300", "970501", "810600"
+)
+
+# Create a new data frame containing only the selected TRACT values
+selected_data_treatment <- all_tracts[all_tracts$TRACT %in% selected_tracts, c("TRACT", "GEOID")]
+
+# Remove duplicated rows based on the GEOID column
+unique_selected_data <- unique(selected_data_treatment)
+
+# View the first few rows of the unique_selected_data data frame
+head(unique_selected_data)
+
+unique_selected_data$GEOID
+
+
+```
+Changing the class of data
+```{r}
+summary(merged_data) 
+summary(merged_data2)
+# Convert character columns to numeric for the specified columns
+merged_data2$Median.age <- as.numeric(merged_data2$Median.age)
+merged_data2$Median.HH.Income <- as.numeric(merged_data2$Median.HH.Income)
+merged_data2$White <- as.numeric(merged_data2$White)
+merged_data2$Black.or.African.American <- as.numeric(merged_data2$Black.or.African.American)
+merged_data2$BS.Degree.and.above <- as.numeric(merged_data2$BS.Degree.and.above)
+merged_data2$Hispanic.or.Latino <- as.numeric(merged_data2$Hispanic.or.Latino)
+merged_data2$Asian <- as.numeric(merged_data2$Asian)
+merged_data2$American.Indian.and.Alaska.Native <- as.numeric(merged_data2$American.Indian.and.Alaska.Native)
+
+merged_data2$Average.HH.size <- as.numeric(merged_data2$Average.HH.size)
+merged_data2$Native.Hawaiian.and.Other.Pacific.Islander <- as.numeric(merged_data2$Native.Hawaiian.and.Other.Pacific.Islander)
+
+merged_data2$Total.Households <- as.numeric(merged_data2$Total.Households)
+merged_data2$Total.Population <- as.numeric(merged_data2$Total.Population)
+```
+
+PSM for the highest quartile of minorities
+
+```{r}
+
+columns_to_sum <- c(
+  "Black.or.African.American",
+  "American.Indian.and.Alaska.Native",
+  "Asian",
+  "Native.Hawaiian.and.Other.Pacific.Islander",
+  "Hispanic.or.Latino"
+)
+# Create a new column for the sum of the specified columns
+merged_data2$sum_of_columns <- rowSums(merged_data2[, columns_to_sum])
+
+# Identify the highest quartile threshold
+highest_quartile_threshold <- quantile(merged_data2$sum_of_columns, probs = 0.75)
+
+# Identify GEOIDs in the specified group
+specified_group_geoids <- c(
+  "4021000201", "4021002300", "4021000307", "4021941200", "4021001403", "4021001100",
+  "4021001200", "4021002001", "4021000803", "4007001300", "4021000211", "4021001303",
+  "4013810600", "4013941200", "4013092500", "4013092305", "4013616000", "4025001403",
+  "4027012100", "4012940200", "4012940300", "4027011202", "4027011405", "4027011503",
+  "4027000100", "4027000301", "4027000600", "4027000700", "4027000907", "4027001100",
+  "4027001200", "4027011112", "4007000700", "4007001100", "4007001200", "4009961100",
+  "4007000100", "4007000301", "4007000600", "4007940400", "4009961300", "4019004316",
+  "4003000301", "4003001100", "4003001200", "4003002100", "4003000100", "4003000600",
+  "4003000700", "4003001300", "4023966000", "4003002001", "4021000700", "4019940800",
+  "4003001502", "4023966101", "4003000201", "4003000202", "4019000100", "4019001200",
+  "4019001302", "4019001303", "4019003802", "4019002100", "4019002300", "4019000600",
+  "4019000700", "4019001100", "4019940900", "4017940100", "4017964202", "4001970501",
+  "4017963300", "4017964201", "4017961300", "4001970300", "4007940200", "4005000100",
+  "4005000700", "4005001200", "4005002300", "4005945100", "4005000600", "4005001302",
+  "4017942500", "4005002100", "4005944900", "4017960400", "4025000700", "4025001200",
+  "4025001300", "4025002100", "4025000202", "4025002004", "4025002001", "4015940400",
+  "4001945100", "4001945001"
+)
+
+# Identify GEOIDs in both specified group and highest quartile
+selected_geoids <- intersect(specified_group_geoids, merged_data2$GEOID[merged_data2$sum_of_columns >= highest_quartile_threshold])
+
+# Display or use the identified GEOIDs as your treatment groups
+print(selected_geoids)
+
+```
+
+```{r, message=FALSE, warning=FALSE}
+library(MatchIt)
+library(dplyr)
+library(stargazer)
+library(texreg)
+merged_data3 <- merged_data2 %>%
+  mutate(treatment = ifelse(GEOID %in% c("4021941200", "4012940300" ,"4007940400", "4019940800" ,"4019002100", "4019002300", "4017940100", "4017961300", "4017942500", "4005002100", "4025001200", "4025000202"), 1, 0))
+
+#Step 1
+psm_data3 <- matchit(treatment ~ Total.Households + Median.age + Average.HH.size + BS.Degree.and.above + White + Black.or.African.American + American.Indian.and.Alaska.Native + Asian + Native.Hawaiian.and.Other.Pacific.Islander + Hispanic.or.Latino,
+                   data =  merged_data3, method = "nearest")
+#Step 2
+matched_data3 <- match.data(psm_data3)  # Extract matched data
+
+# Create a summary table using summary function
+summary_table3 <- summary(matched_data3)
+summary_table3
+
+treatment_geoids3 <- matched_data3$GEOID[matched_data3$treatment == 1]
+treatment_geoids3
+control_geoids3 <- matched_data3$GEOID[matched_data3$treatment == 0]
+control_geoids3
+treatment_counts3 <- table(matched_data3$treatment)
+print(treatment_counts3)
+
+
+#Now use these GEOIDs for the Diff-in-Diff analysis
+merged_data3 <- merged_data
+merged_data3$treatment <- ifelse(merged_data3$GEOID %in% c("4005002100", "4007940400", "4012940300", "4017940100", "4017942500", "4017961300", "4019002100", "4019002300", "4019940800", "4021941200", "4025000202", "4025001200"), 1,
+                              ifelse(merged_data$GEOID %in% c("4007000400", "4009940500", "4001942700", "4013112602", "4019003702", "4015953300", "4013216818", "4013320002", "4013420206", "4013040502", "4013104222", "4025001900"), 0, NA))
+
+# Remove rows with NAs from merged_data
+merged_data3 <- na.omit(merged_data3)
+treatment_counts4 <- table(merged_data3$treatment)
+print(treatment_counts4)
+
+#change the class to numeric
+merged_data$Median.age <- as.numeric(merged_data$Median.age)
+merged_data$Median.HH.Income <- as.numeric(merged_data$Median.HH.Income)
+merged_data$White <- as.numeric(merged_data$White)
+merged_data$Black.or.African.American <- as.numeric(merged_data$Black.or.African.American)
+merged_data$BS.Degree.and.above <- as.numeric(merged_data$BS.Degree.and.above)
+merged_data$Hispanic.or.Latino <- as.numeric(merged_data$Hispanic.or.Latino)
+merged_data$Asian <- as.numeric(merged_data$Asian)
+merged_data$American.Indian.and.Alaska.Native <- as.numeric(merged_data$American.Indian.and.Alaska.Native)
+merged_data$Average.HH.size <- as.numeric(merged_data$Average.HH.size)
+merged_data$Native.Hawaiian.and.Other.Pacific.Islander <- as.numeric(merged_data$Native.Hawaiian.and.Other.Pacific.Islander)
+merged_data$Total.Households <- as.numeric(merged_data$Total.Households)
+
+# Step 3: Estimate Treatment Effect (ATE)
+model <- lm(Median.HH.Income ~ treatment, data = merged_data3)
+summary(model)
+
+# Step 4: Statistical Inference
+# Perform hypothesis testing to assess the statistical significance of the treatment effect.
+model_stat <- lm(Median.HH.Income ~ treatment + Year + treatment*Year + Median.age + Average.HH.size + BS.Degree.and.above + White + Black.or.African.American + American.Indian.and.Alaska.Native + Asian + Native.Hawaiian.and.Other.Pacific.Islander + Hispanic.or.Latino, data = merged_data3)
+
+stargazer(
+  model_stat,
+  type = "text",
+  dep.var.labels = c("Average Household Income"),
+  column.labels = c("Difference in Difference Model"),
+  digits = 2
+)
+```
+
+Defining treatment and control groups
+```{r}
+merged_data2 <- merged_data2 %>%
+  mutate(treatment = ifelse(GEOID %in% c("4021000201", "4021002300", "4021000307", "4021941200", "4021001403", "4021001100", "4021001200", "4021002001", "4021000803", "4007001300", "4021000211", "4021001303", "4013810600", "4013941200", "4013092500", "4013092305", "4013616000", "4025001403", "4027012100", "4012940200", "4012940300", "4027011202", "4027011405", "4027011503", "4027000100", "4027000301", "4027000600", "4027000700", "4027000907", "4027001100", "4027001200", "4027011112", "4007000700", "4007001100", "4007001200", "4009961100", "4007000100", "4007000301", "4007000600", "4007940400", "4009961300", "4019004316", "4003000301", "4003001100", "4003001200", "4003002100", "4003000100", "4003000600", "4003000700", "4003001300", "4023966000", "4003002001", "4021000700", "4019940800", "4003001502", "4023966101", "4003000201", "4003000202", "4019000100", "4019001200", "4019001302", "4019001303", "4019003802", "4019002100", "4019002300", "4019000600", "4019000700", "4019001100", "4019940900", "4017940100", "4017964202", "4001970501", "4017963300", "4017964201", "4017961300", "4001970300", "4007940200", "4005000100", "4005000700", "4005001200", "4005002300", "4005945100", "4005000600", "4005001302", "4017942500", "4005002100", "4005944900", "4017960400", "4025000700", "4025001200", "4025001300", "4025002100", "4025000202", "4025002004", "4025002001", "4015940400", "4001945100", "4001945001"), 1, 0))
+```
+
+
+Sensitivity Analysis
+```{r}
+# Load necessary libraries
+library(MatchIt)
+library(dplyr)
+library(stargazer)
+
+# Define covariates
+covariates <- c("Median.age", "Average.HH.size", "BS.Degree.and.above", "White", 
+                "Black.or.African.American", "American.Indian.and.Alaska.Native", 
+                "Asian", "Native.Hawaiian.and.Other.Pacific.Islander", "Hispanic.or.Latino")
+
+# Store the treatment effect estimates for different methods
+ate_estimates <- data.frame(Method = character(0), ATE = numeric(0), P.value = numeric(0))
+
+# List of matching methods to try
+matching_methods <- c("optimal", "full")
+
+# Loop through the matching methods
+for (method in matching_methods) {
+  # Estimate propensity scores
+  psm_data <- matchit(treatment ~ Total.Households + Median.age + Average.HH.size + 
+                     BS.Degree.and.above + White + Black.or.African.American + 
+                     American.Indian.and.Alaska.Native + Asian + 
+                     Native.Hawaiian.and.Other.Pacific.Islander + Hispanic.or.Latino,
+                     data = merged_data3, method = method)
+  
+  # Perform matching
+  matched_data3 <- match.data(psm_data3)
+  
+  # Estimate treatment effect (ATE)
+  model <- lm(Median.HH.Income ~ treatment, data = matched_data3)
+  
+  # Store ATE estimates and P-value in the dataframe
+  ate_estimates <- rbind(ate_estimates, data.frame(Method = method, ATE = summary(model)$coefficients[2], P.value = summary(model)$coefficients[8]))
+}
+
+# Create a summary table using stargazer
+stargazer(ate_estimates, type = "text", title = "ATE Estimates for Different Matching Methods", digits = 2)
+```
+
+Bootstrapping
+```{r, message=FALSE, warning=FALSE}
+# Load necessary libraries
+library(lmtest)
+library(sandwich)
+library(boot)
+
+# Define a function for bootstrapping to estimate the ATE
+boot_fn <- function(data, indices) {
+  bootstrap_sample <- data[indices, ]
+  model_boot <- lm(Median.HH.Income ~ treatment, data = bootstrap_sample)
+  return(coef(model_boot)[2])
+}
+
+# Set seed for reproducibility
+set.seed(123)
+
+# Number of bootstrap samples
+boot_samples <- 1000
+
+# Create a list to store bootstrapped ATE estimates and p-values
+boot_results <- matrix(NA, nrow = boot_samples, ncol = 2)
+
+# Perform bootstrapping
+for (i in 1:boot_samples) {
+  boot_indices <- sample(nrow(matched_data3), replace = TRUE)
+  boot_results[i, 1] <- boot_fn(matched_data3, boot_indices)
+  
+  # Perform a t-test for each bootstrap sample
+  model_boot <- lm(Median.HH.Income ~ treatment, data = matched_data3[boot_indices, ])
+  boot_results[i, 2] <- coef(summary(model_boot))[2, 4]  # Extract the p-value
+}
+
+# Calculate 95% bootstrap confidence intervals
+boot_ci <- quantile(boot_results[, 1], c(0.025, 0.975))
+boot_ci 
+
+# Create a dataframe for bootstrapping results
+boot_summary <- data.frame(Method = rep("Bootstrapping", boot_samples),
+                           ATE = boot_results[, 1],
+                           P_Value = boot_results[, 2])
+
+# Create a summary table for ATE estimates and p-values from different methods
+ate_summary <- rbind(
+  data.frame(Method = matching_methods, ATE = ate_estimates$ATE, P_Value = NA),  # Add a placeholder for P_Value
+  boot_summary
+)
+
+# Create a summary table using stargazer
+stargazer(ate_summary, type = "text", title = "Sensitivity Analysis Results", digits = 2)
+
+```
+
+Conducting the PSM for all the dataset
+```{r, warning=FALSE, message=FALSE}
+library(MatchIt)
+library(dplyr)
+library(stargazer)
+library(texreg)
+
+# Step 1: Estimate Propensity Scores
+psm_data2 <- matchit(treatment ~ Total.Households + Median.age + Average.HH.size + 
+BS.Degree.and.above + White + Black.or.African.American + American.Indian.and.Alaska.Native + Asian + Native.Hawaiian.and.Other.Pacific.Islander + Hispanic.or.Latino,
+                   data =  merged_data2, method = "nearest")
+  
+
+# Step 2: Perform Matching
+matched_data2 <- match.data(psm_data2)  # Extract matched data
+
+
+library(stargazer)
+
+# Create a summary table using summary function
+summary_table <- summary(matched_data2)
+summary_table
+
+
+#Get the GEOIDs of matched control and treatment groups
+treatment_geoids <- matched_data2$GEOID[matched_data2$treatment == 1]
+treatment_geoids
+control_geoids <- matched_data2$GEOID[matched_data2$treatment == 0]
+control_geoids
+treatment_counts3 <- table(matched_data2$treatment)
+print(treatment_counts3)
+
+
+#Now use these GEOIDs for the Diff-in-Diff analysis
+merged_data$treatment <- ifelse(merged_data$GEOID %in% c("4005001200", "4005002100", "4007000100", "4007000700", "4007001100", "4007001200", "4007001300", "4007940400", "4012940200", "4012940300", "4001945100", "4001970300", "4003000100", "4003000600", "4003000700", "4003001100", "4003001200", "4003001300", "4003002100", "4005000100", "4005000600", "4005000700", "4019003802", "4015940400", "4017940100", "4017942500", "4017960400", "4017961300", "4019000600", "4019000700", "4019001100", "4019001200", "4019001302", "4019002100", "4019002300", "4013092305", "4013092500", "4019004316", "4019940800", "4019940900", "4021000201", "4021000700", "4021001100", "4021001200", "4021941200", "4025000202", "4025000700", "4025001200", "4025001300", "4027000100", "4027000301", "4027000600", "4027000700", "4027001100", "4027001200"), 1,
+                              ifelse(merged_data$GEOID %in% c("4005001700", "4005002000", "4007000200", "4007000400", "4009940500", "4012020100", "4001942600", "4001942700", "4001944000", "4001944100", "4005000800", "4013111401", "4013111601", "4019003702", "4019003705", "4019004037", "4015952900", "4015953100", "4019000300", "4019000900", "4019002504", "4019002505", "4019002801", "4019003102", "4013217101", "4013218100", "4013218200", "4013420902", "4013421400", "4013421902", "4013422104", "4013422215", "4013422501", "4013422607", "4013422610", "4013071600", "4013071801", "4013071906", "4013092900", "4013103612", "4013104214", "4013104501", "4013105400", "4013108100", "4013108400", "4013108802", "4013109604", "4013110600", "4019004310", "4019004322", "4019004614", "4019004624", "4021001000", "4027000302", "4027011501"), 0, NA))
+
+# Remove rows with NAs from merged_data
+merged_data <- na.omit(merged_data)
+treatment_counts4 <- table(merged_data$treatment)
+print(treatment_counts4)
+
+#change the class to numeric
+merged_data$Median.age <- as.numeric(merged_data$Median.age)
+merged_data$Median.HH.Income <- as.numeric(merged_data$Median.HH.Income)
+merged_data$White <- as.numeric(merged_data$White)
+merged_data$Black.or.African.American <- as.numeric(merged_data$Black.or.African.American)
+merged_data$BS.Degree.and.above <- as.numeric(merged_data$BS.Degree.and.above)
+merged_data$Hispanic.or.Latino <- as.numeric(merged_data$Hispanic.or.Latino)
+merged_data$Asian <- as.numeric(merged_data$Asian)
+merged_data$American.Indian.and.Alaska.Native <- as.numeric(merged_data$American.Indian.and.Alaska.Native)
+merged_data$Average.HH.size <- as.numeric(merged_data$Average.HH.size)
+merged_data$Native.Hawaiian.and.Other.Pacific.Islander <- as.numeric(merged_data$Native.Hawaiian.and.Other.Pacific.Islander)
+merged_data$Total.Households <- as.numeric(merged_data$Total.Households)
+
+# Step 3: Estimate Treatment Effect (ATE)
+model <- lm(Median.HH.Income ~ treatment, data = merged_data)
+summary(model)
+
+# Step 4: Statistical Inference
+# Perform hypothesis testing to assess the statistical significance of the treatment effect.
+model_stat <- lm(Median.HH.Income ~ treatment + Year + treatment*Year + Median.age + Average.HH.size + BS.Degree.and.above + White + Black.or.African.American + American.Indian.and.Alaska.Native + Asian + Native.Hawaiian.and.Other.Pacific.Islander + Hispanic.or.Latino, data = merged_data)
+
+stargazer(
+  model_stat,
+  type = "text",
+  dep.var.labels = c("Average Household Income"),
+  column.labels = c("Difference in Difference Model"),
+  digits = 2
+)
+
+```
+
+Find the total number of treatments versus control
+```{r}
+treatment_counts <- table(merged_data$treatment)
+print(treatment_counts)
+
+```
+
+Sensitivity Analysis
+```{r}
+# Load necessary libraries
+library(MatchIt)
+library(dplyr)
+library(stargazer)
+
+# Define covariates
+covariates <- c("Median.age", "Average.HH.size", "BS.Degree.and.above", "White", 
+                "Black.or.African.American", "American.Indian.and.Alaska.Native", 
+                "Asian", "Native.Hawaiian.and.Other.Pacific.Islander", "Hispanic.or.Latino")
+
+# Store the treatment effect estimates for different methods
+ate_estimates <- data.frame(Method = character(0), ATE = numeric(0), P.value = numeric(0))
+
+# List of matching methods to try
+matching_methods <- c("optimal", "full")
+
+# Loop through the matching methods
+for (method in matching_methods) {
+  # Estimate propensity scores
+  psm_data <- matchit(treatment ~ Total.Households + Median.age + Average.HH.size + 
+                     BS.Degree.and.above + White + Black.or.African.American + 
+                     American.Indian.and.Alaska.Native + Asian + 
+                     Native.Hawaiian.and.Other.Pacific.Islander + Hispanic.or.Latino,
+                     data = merged_data, method = method)
+  
+  # Perform matching
+  matched_data <- match.data(psm_data)
+  
+  # Estimate treatment effect (ATE)
+  model <- lm(Median.HH.Income ~ treatment, data = matched_data)
+  
+  # Store ATE estimates and P-value in the dataframe
+  ate_estimates <- rbind(ate_estimates, data.frame(Method = method, ATE = summary(model)$coefficients[2], P.value = summary(model)$coefficients[8]))
+}
+
+# Create a summary table using stargazer
+stargazer(ate_estimates, type = "text", title = "ATE Estimates for Different Matching Methods", digits = 2)
+```
+
+Bootstrapping
+```{r, message=FALSE, warning=FALSE}
+# Load necessary libraries
+library(lmtest)
+library(sandwich)
+library(boot)
+
+# Define a function for bootstrapping to estimate the ATE
+boot_fn <- function(data, indices) {
+  bootstrap_sample <- data[indices, ]
+  model_boot <- lm(Median.HH.Income ~ treatment, data = bootstrap_sample)
+  return(coef(model_boot)[2])
+}
+
+# Set seed for reproducibility
+set.seed(123)
+
+# Number of bootstrap samples
+boot_samples <- 1000
+
+# Create a list to store bootstrapped ATE estimates and p-values
+boot_results <- matrix(NA, nrow = boot_samples, ncol = 2)
+
+# Perform bootstrapping
+for (i in 1:boot_samples) {
+  boot_indices <- sample(nrow(matched_data), replace = TRUE)
+  boot_results[i, 1] <- boot_fn(matched_data, boot_indices)
+  
+  # Perform a t-test for each bootstrap sample
+  model_boot <- lm(Median.HH.Income ~ treatment, data = matched_data[boot_indices, ])
+  boot_results[i, 2] <- coef(summary(model_boot))[2, 4]  # Extract the p-value
+}
+
+# Calculate 95% bootstrap confidence intervals
+boot_ci <- quantile(boot_results[, 1], c(0.025, 0.975))
+boot_ci 
+
+# Create a dataframe for bootstrapping results
+boot_summary <- data.frame(Method = rep("Bootstrapping", boot_samples),
+                           ATE = boot_results[, 1],
+                           P_Value = boot_results[, 2])
+
+# Create a summary table for ATE estimates and p-values from different methods
+ate_summary <- rbind(
+  data.frame(Method = matching_methods, ATE = ate_estimates$ATE, P_Value = NA),  # Add a placeholder for P_Value
+  boot_summary
+)
+
+# Create a summary table using stargazer
+stargazer(ate_summary, type = "text", title = "Sensitivity Analysis Results", digits = 2)
+
+```
+
+
+```{r}
+summary(merged_data3)
+```
+
