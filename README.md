@@ -1,6 +1,6 @@
 # Final Applied Project
 
-## Broadband technologies program
+## Broadband Technologies Program
 This study delves into the impact of the Broadband Technology Opportunities Program's Public Computer Center (BTOP PCC) grants, focusing on the Arizona Public Computer Centers initiative. These grants aimed to augment broadband access by improving computer infrastructure and broadband facilities in public libraries, particularly in underserved communities. 
 
 ## Data 
