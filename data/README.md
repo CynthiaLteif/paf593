@@ -1,1 +1,1 @@
-This folder includes all the necessary data sets involves in the analysis.
+This folder includes all the necessary data sets involved in the analysis.
