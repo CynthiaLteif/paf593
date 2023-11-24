@@ -1,9 +1,3 @@
-# Ignore misc. files
-test_script.R
-
-# Ignore password file 
-password.R
-
 # History files
 .Rhistory
 .Rapp.history
