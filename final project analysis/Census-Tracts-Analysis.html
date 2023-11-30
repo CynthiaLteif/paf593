@@ -539,7 +539,6 @@ colnames(data_2014) &lt;- new_column_names_2014</code></pre>
 <pre class="r"><code>merged_data &lt;- rbind(data_2009, data_2014)
 # Remove NAs 
 merged_data &lt;- na.omit(merged_data)
-# Assuming &quot;Year&quot; is the name of the column containing the information about the year
 year_counts1 &lt;- table(merged_data$Year)
 print(year_counts1)</code></pre>
 <pre><code>## 
@@ -620,8 +619,6 @@ benchmark &lt;- &quot;Public_AR_Census2020&quot;
 
 # Loop through the rows of the coordinates data frame
 
-# ...
-
 for (i in 1:nrow(coords_df)) {
   # Get latitude and longitude from the data frame
   latitude &lt;- coords_df[i, &quot;lat&quot;]
@@ -678,7 +675,7 @@ results_df$TRACT</code></pre>
 ## [73] &quot;001403&quot; &quot;960400&quot; &quot;001403&quot; &quot;000600&quot; &quot;011112&quot; &quot;005703&quot; &quot;012100&quot; &quot;011405&quot;
 ## [81] &quot;011503&quot; &quot;000907&quot; &quot;011202&quot;</code></pre>
 <p>Getting the GEOID from the Census Tracts</p>
-<pre class="r"><code># Define the list of TRACT values you want to keep
+<pre class="r"><code># Define the list of TRACT values to keep
 selected_tracts &lt;- c(
   &quot;000100&quot;, &quot;000101&quot;, &quot;000201&quot;, &quot;000202&quot;, &quot;000211&quot;, &quot;000301&quot;, &quot;000307&quot;,
   &quot;000600&quot;, &quot;000615&quot;, &quot;000700&quot;, &quot;000702&quot;, &quot;000803&quot;, &quot;000904&quot;, &quot;000907&quot;,

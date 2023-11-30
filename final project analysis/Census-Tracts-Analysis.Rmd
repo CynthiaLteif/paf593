@@ -172,7 +172,6 @@ colnames(data_2014) <- new_column_names_2014
 merged_data <- rbind(data_2009, data_2014)
 # Remove NAs 
 merged_data <- na.omit(merged_data)
-# Assuming "Year" is the name of the column containing the information about the year
 year_counts1 <- table(merged_data$Year)
 print(year_counts1)
 #Find unique number of census tracts
@@ -225,8 +224,6 @@ benchmark <- "Public_AR_Census2020"
 
 # Loop through the rows of the coordinates data frame
 
-# ...
-
 for (i in 1:nrow(coords_df)) {
   # Get latitude and longitude from the data frame
   latitude <- coords_df[i, "lat"]
@@ -276,7 +273,7 @@ results_df$TRACT
 
 Getting the GEOID from the Census Tracts
 ```{r}
-# Define the list of TRACT values you want to keep
+# Define the list of TRACT values to keep
 selected_tracts <- c(
   "000100", "000101", "000201", "000202", "000211", "000301", "000307",
   "000600", "000615", "000700", "000702", "000803", "000904", "000907",
